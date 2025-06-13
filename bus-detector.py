@@ -5,6 +5,19 @@ from src.remap import remap_labels
 from src.invert import invert_yolo_data
 from src.merger import merge_yolo_datasets
 
+
+"""
+
+Training Strategy:
+
+1. Download COCO dataset and remove all buses  
+2. Download Singapore Bus Data and crop out all buses
+3. Stitch singapore buses onto COCO dataset background images
+4. Merge stitched dataset with original singapore bus dataset 
+5. Train model on merged dataset
+"""
+
+
 # Download the COCO dataset
 
 coco_dir = "data/bus-coco"

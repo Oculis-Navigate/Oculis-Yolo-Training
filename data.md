@@ -1,3 +1,8 @@
+Note:
+
+- for https://universe.roboflow.com/fulgore/sbs-bus-numbers-uqimt-x9n31 rotate all images with dimension 4032x2268 by 90 deg to align it. It has a EXIF issue.
+
+
 
 ## Bus Detector Training
 
@@ -34,6 +39,7 @@ Joined
 - [BusDigits Object Detection Dataset and Pre-Trained Model by nanyang polytechnic](https://universe.roboflow.com/nanyang-polytechnic-rskkz/busdigits)
 - [Bus Number Dataset Object Detection Dataset and Pre-Trained Model by NYP](https://universe.roboflow.com/nyp/bus-number-dataset)
 - https://universe.roboflow.com/fyp-2zcsf/bus-detection-qzyuz
+- https://universe.roboflow.com/fulgore/sbs-bus-numbers-uqimt-x9n31
 
 
 Background
