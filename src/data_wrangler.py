@@ -40,13 +40,22 @@ class YOLODataset:
         for split in self.splits_use:
             labels_path = os.path.join(self.path, "labels", split) 
 
-            # walk through all files in the labels folder
-            for file in os.listdir(labels_path):
-                with open(os.path.join(labels_path, file), "r") as f:
+            # Filter only .txt files for efficiency
+            label_files = [f for f in os.listdir(labels_path) if f.endswith('.txt')]
+            
+            # walk through all label files
+            for file in label_files:
+                file_path = os.path.join(labels_path, file)
+                
+                # Skip empty files
+                if os.path.getsize(file_path) == 0:
+                    continue
+                    
+                with open(file_path, "r") as f:
                     # Read the file line by line
                     overall_dict = {}
 
-                    label_path = os.path.join(labels_path, file)
+                    label_path = file_path
                     image_path = label_path.replace("labels", "images", 1)
 
                     overall_dict["image_path"] = image_path
@@ -56,42 +65,60 @@ class YOLODataset:
                     overall_dict["split"] = split
 
                     for line in f:
+                        line = line.strip()
+                        if not line:  # Skip empty lines
+                            continue
+                            
                         # Split the line into parts
                         parts = line.split()
-                        # The first part is the class
-                        obj_class = int(parts[0]) 
-                        x_center = float(parts[1])
-                        y_center = float(parts[2])
-                        width = float(parts[3])
-                        height = float(parts[4])
+                        if len(parts) != 5:  # Skip malformed lines
+                            continue
+                            
+                        try:
+                            # The first part is the class
+                            obj_class = int(parts[0]) 
+                            x_center = float(parts[1])
+                            y_center = float(parts[2])
+                            width = float(parts[3])
+                            height = float(parts[4])
 
-                        overall_dict["labels"].append({
-                            "obj_class": obj_class,
-                            "x_center": x_center,
-                            "y_center": y_center,
-                            "width": width,
-                            "height": height
-                        })
+                            overall_dict["labels"].append({
+                                "obj_class": obj_class,
+                                "x_center": x_center,
+                                "y_center": y_center,
+                                "width": width,
+                                "height": height
+                            })
+                        except ValueError:
+                            # Skip lines with invalid data
+                            continue
                     
-                    available_classes = set([label["obj_class"] for label in overall_dict["labels"]])
-
-                    overall_dict["available_classes"] = available_classes
-
-                    self.labels.append(overall_dict)
+                    if overall_dict["labels"]:  # Only add if there are valid labels
+                        available_classes = set([label["obj_class"] for label in overall_dict["labels"]])
+                        overall_dict["available_classes"] = available_classes
+                        self.labels.append(overall_dict)
                         
     def crop_images(self, output_path: str, crop_filter: list[int]): 
+        # Pre-create all needed directories once
+        for split in self.splits_use:
+            for class_idx in crop_filter:
+                if class_idx < len(self.classes):  # Safety check
+                    class_name = self.classes[class_idx]
+                    os.makedirs(os.path.join(output_path, split, class_name), exist_ok=True)
+        
         for label in self.labels:
             if len(label["available_classes"].intersection(crop_filter)) > 0:
                 output_path_image = os.path.join(output_path, label["split"])
 
                 count = 0
 
-                # Load original image for each crop
+                # Load original image once per file
                 original_image = cv2.imread(label["image_path"])
-                
+                if original_image is None:
+                    continue
+                    
                 # Get dimensions from the loaded image
-                image_width = original_image.shape[1]
-                image_height = original_image.shape[0]
+                image_height, image_width = original_image.shape[:2]
 
                 for obj in label["labels"]:
                     if obj["obj_class"] in crop_filter:
@@ -108,10 +135,8 @@ class YOLODataset:
                         # Save the image
                         class_name = self.classes[obj["obj_class"]]
 
-                        # Create output directory if it doesn't exist
+                        # No need to create directory - already done
                         class_output_dir = os.path.join(output_path_image, class_name)
-                        os.makedirs(class_output_dir, exist_ok=True)
-
                         output_path_full = os.path.join(class_output_dir, os.path.basename(label['image_path']).replace(".", f"_{count}."))
                         cv2.imwrite(output_path_full, cropped_image)   
 
@@ -131,9 +156,10 @@ class YOLODataset:
                 continue
 
             image = cv2.imread(label["image_path"]) 
+            if image is None:
+                continue
 
-            image_width = image.shape[1]    
-            image_height = image.shape[0]
+            image_height, image_width = image.shape[:2]
 
             for obj in to_remove:
                 y_center = obj["y_center"] * image_height
@@ -141,9 +167,13 @@ class YOLODataset:
                 height = obj["height"] * image_height
                 width = obj["width"] * image_width
 
-                image[int(y_center - height / 2):int(y_center + height / 2), 
-                      int(x_center - width / 2):int(x_center + width / 2)] = [0, 0, 0]
+                # Add bounds checking to prevent array out of bounds
+                y1 = max(0, int(y_center - height / 2))
+                y2 = min(image_height, int(y_center + height / 2))
+                x1 = max(0, int(x_center - width / 2))
+                x2 = min(image_width, int(x_center + width / 2))
 
-            # Ensure output directory exists before writing
-            os.makedirs(os.path.dirname(label["image_path"]), exist_ok=True)
+                image[y1:y2, x1:x2] = [0, 0, 0]
+
+            # Remove redundant makedirs - the directory should already exist
             cv2.imwrite(label["image_path"], image)
