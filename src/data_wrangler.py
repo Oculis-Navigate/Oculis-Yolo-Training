@@ -82,18 +82,19 @@ class YOLODataset:
     def crop_images(self, output_path: str, crop_filter: list[int]): 
         for label in self.labels:
             if len(label["available_classes"].intersection(crop_filter)) > 0:
-                image = cv2.imread(label["image_path"])
-
-                image_width = image.shape[1]
-                image_height = image.shape[0]
-
                 output_path_image = os.path.join(output_path, label["split"])
 
                 count = 0
 
+                # Load original image for each crop
+                original_image = cv2.imread(label["image_path"])
+                
+                # Get dimensions from the loaded image
+                image_width = original_image.shape[1]
+                image_height = original_image.shape[0]
+
                 for obj in label["labels"]:
                     if obj["obj_class"] in crop_filter:
-                        
                         # De normalise the bounding box 
                         x_center = obj["x_center"] * image_width
                         y_center = obj["y_center"] * image_height
@@ -101,14 +102,18 @@ class YOLODataset:
                         height = obj["height"] * image_height
 
                         # Crop the image
-                        image = image[int(y_center - height / 2):int(y_center + height / 2), 
+                        cropped_image = original_image[int(y_center - height / 2):int(y_center + height / 2), 
                                       int(x_center - width / 2):int(x_center + width / 2)]
 
                         # Save the image
                         class_name = self.classes[obj["obj_class"]]
 
-                        output_path_full = os.path.join(output_path_image, class_name, os.path.basename(label['image_path']).replace(".", f"_{count}."))
-                        cv2.imwrite(output_path_full, image)   
+                        # Create output directory if it doesn't exist
+                        class_output_dir = os.path.join(output_path_image, class_name)
+                        os.makedirs(class_output_dir, exist_ok=True)
+
+                        output_path_full = os.path.join(class_output_dir, os.path.basename(label['image_path']).replace(".", f"_{count}."))
+                        cv2.imwrite(output_path_full, cropped_image)   
 
                         count += 1
                         
@@ -139,4 +144,6 @@ class YOLODataset:
                 image[int(y_center - height / 2):int(y_center + height / 2), 
                       int(x_center - width / 2):int(x_center + width / 2)] = [0, 0, 0]
 
+            # Ensure output directory exists before writing
+            os.makedirs(os.path.dirname(label["image_path"]), exist_ok=True)
             cv2.imwrite(label["image_path"], image)
