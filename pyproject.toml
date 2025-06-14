@@ -1,0 +1,30 @@
+[project]
+name = "scvu-training"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "ram",email = "justforthegreatergood@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ultralytics (>=8.3.154,<9.0.0)",
+    "opencv-python (>=4.11.0.86,<5.0.0.0)",
+    "pyyaml (>=6.0.2,<7.0.0)",
+    "requests (>=2.32.4,<3.0.0)",
+    "pillow (>=11.2.1,<12.0.0)",
+    "dotenv (>=0.9.9,<0.10.0)"
+]
+
+[tool.poetry]
+package-mode = false
+[tool.poetry.group.dev.dependencies]
+ultralytics = "^8.3.154"
+opencv-python = "^4.11.0.86"
+pillow = "^11.2.1"
+pyyaml = "^6.0.2"
+tqdm = "^4.67.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

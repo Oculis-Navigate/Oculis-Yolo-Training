@@ -1,6 +1,8 @@
 import os
 import random
 import cv2
+import logging
+from tqdm import tqdm
 
 """
 
@@ -24,6 +26,9 @@ Folder
 
 """
 
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class YOLODataset:
     def __init__(self, path: str, classes: list[str], splits_use: list[str] = ["train", "valid", "test"]):
@@ -34,17 +39,27 @@ class YOLODataset:
         # No need load images
         self.labels = []
 
+        logger.info(f"Initializing YOLO dataset from: {path}")
+        logger.info(f"Classes: {classes}")
+        logger.info(f"Splits: {splits_use}")
         self.load_data()
 
     def load_data(self):
+        logger.info("Loading dataset metadata...")
+        total_files = 0
+        
         for split in self.splits_use:
             labels_path = os.path.join(self.path, "labels", split) 
+            if not os.path.exists(labels_path):
+                logger.warning(f"Labels path not found: {labels_path}")
+                continue
 
             # Filter only .txt files for efficiency
             label_files = [f for f in os.listdir(labels_path) if f.endswith('.txt')]
+            logger.info(f"Found {len(label_files)} label files in {split} split")
             
             # walk through all label files
-            for file in label_files:
+            for file in tqdm(label_files, desc=f"Loading {split} labels"):
                 file_path = os.path.join(labels_path, file)
                 
                 # Skip empty files
@@ -57,6 +72,14 @@ class YOLODataset:
 
                     label_path = file_path
                     image_path = label_path.replace("labels", "images", 1)
+                    
+                    # Change extension from .txt to common image formats
+                    base_name = os.path.splitext(image_path)[0]
+                    for ext in ['.jpg', '.jpeg', '.png', '.bmp']:
+                        potential_image = base_name + ext
+                        if os.path.exists(potential_image):
+                            image_path = potential_image
+                            break
 
                     overall_dict["image_path"] = image_path
                     overall_dict["label_path"] = label_path
@@ -97,8 +120,14 @@ class YOLODataset:
                         available_classes = set([label["obj_class"] for label in overall_dict["labels"]])
                         overall_dict["available_classes"] = available_classes
                         self.labels.append(overall_dict)
+                        total_files += 1
+        
+        logger.info(f"Loaded {total_files} files with {len(self.labels)} valid samples")
                         
     def crop_images(self, output_path: str, crop_filter: list[int]): 
+        logger.info(f"Starting image cropping. Output: {output_path}")
+        logger.info(f"Crop filter classes: {crop_filter}")
+        
         # Pre-create all needed directories once
         for split in self.splits_use:
             for class_idx in crop_filter:
@@ -106,44 +135,57 @@ class YOLODataset:
                     class_name = self.classes[class_idx]
                     os.makedirs(os.path.join(output_path, split, class_name), exist_ok=True)
         
-        for label in self.labels:
-            if len(label["available_classes"].intersection(crop_filter)) > 0:
-                output_path_image = os.path.join(output_path, label["split"])
+        total_crops = 0
+        filtered_labels = [label for label in self.labels 
+                          if len(label["available_classes"].intersection(crop_filter)) > 0]
+        
+        logger.info(f"Processing {len(filtered_labels)} images for cropping")
+        
+        for label in tqdm(filtered_labels, desc="Cropping images"):
+            output_path_image = os.path.join(output_path, label["split"])
+            count = 0
 
-                count = 0
+            # Load original image once per file
+            original_image = cv2.imread(label["image_path"])
+            if original_image is None:
+                logger.warning(f"Could not load image: {label['image_path']}")
+                continue
+                
+            # Get dimensions from the loaded image
+            image_height, image_width = original_image.shape[:2]
 
-                # Load original image once per file
-                original_image = cv2.imread(label["image_path"])
-                if original_image is None:
-                    continue
-                    
-                # Get dimensions from the loaded image
-                image_height, image_width = original_image.shape[:2]
+            for obj in label["labels"]:
+                if obj["obj_class"] in crop_filter:
+                    # De normalise the bounding box 
+                    x_center = obj["x_center"] * image_width
+                    y_center = obj["y_center"] * image_height
+                    width = obj["width"] * image_width
+                    height = obj["height"] * image_height
 
-                for obj in label["labels"]:
-                    if obj["obj_class"] in crop_filter:
-                        # De normalise the bounding box 
-                        x_center = obj["x_center"] * image_width
-                        y_center = obj["y_center"] * image_height
-                        width = obj["width"] * image_width
-                        height = obj["height"] * image_height
+                    # Crop the image
+                    cropped_image = original_image[int(y_center - height / 2):int(y_center + height / 2), 
+                                  int(x_center - width / 2):int(x_center + width / 2)]
 
-                        # Crop the image
-                        cropped_image = original_image[int(y_center - height / 2):int(y_center + height / 2), 
-                                      int(x_center - width / 2):int(x_center + width / 2)]
+                    # Save the image
+                    class_name = self.classes[obj["obj_class"]]
 
-                        # Save the image
-                        class_name = self.classes[obj["obj_class"]]
+                    # No need to create directory - already done
+                    class_output_dir = os.path.join(output_path_image, class_name)
+                    output_path_full = os.path.join(class_output_dir, os.path.basename(label['image_path']).replace(".", f"_{count}."))
+                    cv2.imwrite(output_path_full, cropped_image)   
 
-                        # No need to create directory - already done
-                        class_output_dir = os.path.join(output_path_image, class_name)
-                        output_path_full = os.path.join(class_output_dir, os.path.basename(label['image_path']).replace(".", f"_{count}."))
-                        cv2.imwrite(output_path_full, cropped_image)   
-
-                        count += 1
+                    count += 1
+                    total_crops += 1
+        
+        logger.info(f"Cropping completed. Total crops saved: {total_crops}")
                         
     def remove_classes_inplace(self, remove_filter: list[int]): 
-        for label in self.labels:
+        logger.info(f"Starting class removal. Classes to remove: {remove_filter}")
+        
+        processed_images = 0
+        total_removed = 0
+        
+        for label in tqdm(self.labels, desc="Removing classes"):
             old_labels = label["labels"]
             label["labels"] = [obj for obj in label["labels"] if obj["obj_class"] not in remove_filter]
 
@@ -157,6 +199,7 @@ class YOLODataset:
 
             image = cv2.imread(label["image_path"]) 
             if image is None:
+                logger.warning(f"Could not load image: {label['image_path']}")
                 continue
 
             image_height, image_width = image.shape[:2]
@@ -174,6 +217,10 @@ class YOLODataset:
                 x2 = min(image_width, int(x_center + width / 2))
 
                 image[y1:y2, x1:x2] = [0, 0, 0]
+                total_removed += 1
 
             # Remove redundant makedirs - the directory should already exist
             cv2.imwrite(label["image_path"], image)
+            processed_images += 1
+        
+        logger.info(f"Class removal completed. Processed {processed_images} images, removed {total_removed} objects")

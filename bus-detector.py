@@ -4,7 +4,8 @@ from src.roboflow import download_dataset
 from src.remap import remap_labels
 from src.invert import invert_yolo_data
 from src.merger import merge_yolo_datasets
-
+from src.ai import train_model, test_model
+from src.data_wrangler import YOLODataset
 
 """
 
@@ -15,6 +16,7 @@ Training Strategy:
 3. Stitch singapore buses onto COCO dataset background images
 4. Merge stitched dataset with original singapore bus dataset 
 5. Train model on merged dataset
+
 """
 
 
@@ -24,16 +26,18 @@ coco_dir = "data/bus-coco"
 download_coco_dataset(coco_dir)
 
 # Rename to train val test
-
-os.rename(f"{coco_dir}/images/train2017", f"{coco_dir}/train")
-os.rename(f"{coco_dir}/images/val2017", f"{coco_dir}/val")
-os.rename(f"{coco_dir}/labels/train2017", f"{coco_dir}/train/labels")
-os.rename(f"{coco_dir}/labels/val2017", f"{coco_dir}/val/labels")
+os.rename(f"{coco_dir}/images/train2017", f"{coco_dir}/images/train")
+os.rename(f"{coco_dir}/images/val2017", f"{coco_dir}/images/val")
+os.rename(f"{coco_dir}/labels/train2017", f"{coco_dir}/labels/train")
+os.rename(f"{coco_dir}/labels/val2017", f"{coco_dir}/labels/val")
 
 # Relabel with only buses left
+remap_labels(f"{coco_dir}/labels/train", {0: [5]})
+remap_labels(f"{coco_dir}/labels/val", {0: [5]})
 
-remap_labels(f"{coco_dir}/train/labels", {0: [5]})
-remap_labels(f"{coco_dir}/val/labels", {0: [5]})
+
+coco_dataset = YOLODataset(coco_dir, ["bus"], ["train", "val"])
+coco_dataset.remove_classes_inplace([0])
 
 # Download the Singapore Bus Data
 
