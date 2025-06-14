@@ -7,6 +7,8 @@ from src.invert import invert_yolo_data
 from src.merger import merge_yolo_datasets
 from src.ai import train_model, test_model
 from src.data_wrangler import YOLODataset
+import albumentations as A
+from snapstitch import Stitcher, PartsLoader, BackgroundLoader, YOLOv8Generator
 
 """
 
@@ -25,6 +27,22 @@ stitch_crops = "stitching/crops"
 stitch_backgrounds = "stitching/backgrounds" 
 
 pretrained_model = "models/busDetector_Distilled.pt"
+
+# Define transformations
+transform = A.Compose([
+    A.GaussianBlur(blur_limit=(3, 5), p=0.3),
+    A.RandomBrightnessContrast(p=0.3),
+])
+
+background_transform = A.Compose([
+    A.GaussianBlur(blur_limit=(3, 5), p=0.3),
+    A.RandomBrightnessContrast(p=0.3),
+    A.RandomGamma(p=0.3),
+    A.ShiftScaleRotate(p=0.3),
+    A.Rotate(p=0.3),
+    A.HorizontalFlip(p=0.3),
+    A.VerticalFlip(p=0.3),
+])
 
 # Download the COCO dataset
 
@@ -99,3 +117,44 @@ for path, split in ROBOFLOW_PATHS_UNLABELED:
     dataset = YOLODataset(dataset_dir, ["bus"], ["train", "val"]) 
     dataset.crop_using_model(pretrained_model, split, stitch_crops + "/" + path.split("/")[-1], "bus")
 
+
+# Perform Stitching
+
+train_background = BackgroundLoader(f"{stitch_backgrounds}/coco/train", target_size=(1280, 720), max_cache_size=200, transform=background_transform)
+val_background = BackgroundLoader(f"{stitch_backgrounds}/coco/val", target_size=(1280, 720), max_cache_size=200, transform=background_transform)
+
+bus_part_train = PartsLoader(stitch_crops + "/train", scale=0.3, transform=transform, scaling_variation=0.7, max_cache_size=1000)
+bus_part_val = PartsLoader(stitch_crops + "/val", scale=0.3, transform=transform, scaling_variation=0.7, max_cache_size=1000)
+
+generator = YOLOv8Generator(overlap_ratio=0.05)
+
+train_stitcher = Stitcher(generator, train_background, {
+    "0": [bus_part_train, 0.1],
+}, parts_per_image=30)
+
+val_stitcher = Stitcher(generator, val_background, {
+    "0": [bus_part_val, 0.1],
+}, parts_per_image=100)
+
+# Remove exisint data folder
+if os.path.exists("data"):
+    shutil.rmtree("data")
+
+os.makedirs("data")
+
+# Generate datasets
+train_stitcher.execute(
+    7000, 
+    "data", 
+    "train_1", 
+    train_or_val=True,
+    perimeter_end=(1280, 720)
+)
+
+val_stitcher.execute(
+    3000, 
+    "data", 
+    "val_1", 
+    train_or_val=False,
+    perimeter_end=(1280, 720)
+)
