@@ -1,8 +1,10 @@
 import os
 import random
+import shutil
 import cv2
 import logging
 from tqdm import tqdm
+from ultralytics import YOLO
 
 """
 
@@ -11,6 +13,7 @@ Data wrangler
 Key Functions:
 - Crop out images based on class
 - Remove a certain class and replace with color
+- Crop images using a trained model 
 
 Should be in this format:
 
@@ -224,3 +227,18 @@ class YOLODataset:
             processed_images += 1
         
         logger.info(f"Class removal completed. Processed {processed_images} images, removed {total_removed} objects")
+
+    def crop_using_model(self, model: YOLO, split: str, output_path: str, class_name: str):
+        logger.info(f"Starting image cropping using model. Output: {output_path}") 
+
+        os.makedirs(output_path, exist_ok=True)
+
+        # Call the model.predict method
+        results = model.predict(self.path + "/images/" + split, save=True, save_crop=True) 
+
+        saved_dir = results[0].save_dir + "/crops/" + class_name
+
+        # Copy entire saved directory to output path 
+        shutil.copytree(saved_dir, output_path)
+
+        logger.info(f"Image cropping completed. Total crops saved: {len(os.listdir(output_path))}")
