@@ -160,26 +160,28 @@ class YOLODataset:
             for obj in label["labels"]:
                 if obj["obj_class"] in crop_filter:
                     # De normalise the bounding box 
-                    x_center = obj["x_center"] * image_width
-                    y_center = obj["y_center"] * image_height
-                    width = obj["width"] * image_width
-                    height = obj["height"] * image_height
-
-                    # Crop the image
-                    cropped_image = original_image[int(y_center - height / 2):int(y_center + height / 2), 
-                                  int(x_center - width / 2):int(x_center + width / 2)]
-
-                    # Save the image
-                    class_name = self.classes[obj["obj_class"]]
-
-                    # No need to create directory - already done
-                    class_output_dir = os.path.join(output_path_image, class_name)
-                    output_path_full = os.path.join(class_output_dir, os.path.basename(label['image_path']).replace(".", f"_{count}."))
-                    cv2.imwrite(output_path_full, cropped_image)   
-
-                    count += 1
-                    total_crops += 1
-        
+                    try:
+                        x_center = obj["x_center"] * image_width
+                        y_center = obj["y_center"] * image_height
+                        width = obj["width"] * image_width
+                        height = obj["height"] * image_height
+    
+                        # Crop the image
+                        cropped_image = original_image[int(y_center - height / 2):int(y_center + height / 2), 
+                                      int(x_center - width / 2):int(x_center + width / 2)]
+    
+                        # Save the image
+                        class_name = self.classes[obj["obj_class"]]
+    
+                        # No need to create directory - already done
+                        class_output_dir = os.path.join(output_path_image, class_name)
+                        output_path_full = os.path.join(class_output_dir, os.path.basename(label['image_path']).replace(".", f"_{count}."))
+                        cv2.imwrite(output_path_full, cropped_image)   
+    
+                        count += 1
+                        total_crops += 1
+                    except:
+                        print("Error cropping images")
         logger.info(f"Cropping completed. Total crops saved: {total_crops}")
                         
     def remove_classes_inplace(self, remove_filter: list[int]): 
@@ -231,7 +233,7 @@ class YOLODataset:
     def crop_using_model(self, model: YOLO, split: str, output_path: str, class_name: str):
         logger.info(f"Starting image cropping using model. Output: {output_path}") 
 
-        os.makedirs(output_path, exist_ok=True)
+        # os.makedirs(output_path, exist_ok=True)
 
         # Call the model.predict method
         results = model.predict(self.path + "/images/" + split, save=True, save_crop=True) 

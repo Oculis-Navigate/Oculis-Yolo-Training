@@ -1,0 +1,9 @@
+ultralytics
+tqdm
+requests
+python-dotenv
+pathlib
+opencv-python
+pyyaml
+albumentations
+snapstitch

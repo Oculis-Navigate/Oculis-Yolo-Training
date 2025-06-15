@@ -9,6 +9,7 @@ from src.ai import train_model, test_model
 from src.data_wrangler import YOLODataset
 import albumentations as A
 from snapstitch import Stitcher, PartsLoader, BackgroundLoader, YOLOv8Generator
+from ultralytics import YOLO
 
 """
 
@@ -26,7 +27,8 @@ stitch_output = "stitching"
 stitch_crops = "stitching/crops"
 stitch_backgrounds = "stitching/backgrounds" 
 
-pretrained_model = "models/busDetector_Distilled.pt"
+pretrained_model = YOLO("models/busDetector_Distilled.pt")
+
 
 # Define transformations
 transform = A.Compose([
@@ -46,14 +48,20 @@ background_transform = A.Compose([
 
 # Download the COCO dataset
 
-coco_dir = "data/bus-coco"
+coco_dir = "./data/bus-coco"
 download_coco_dataset(coco_dir)
+
+print(os.system(f"ls {coco_dir}/coco/labels"))
 
 # Rename to train val test
 os.rename(f"{coco_dir}/images/train2017", f"{coco_dir}/images/train")
 os.rename(f"{coco_dir}/images/val2017", f"{coco_dir}/images/val")
-os.rename(f"{coco_dir}/labels/train2017", f"{coco_dir}/labels/train")
-os.rename(f"{coco_dir}/labels/val2017", f"{coco_dir}/labels/val")
+
+os.makedirs(f"{coco_dir}/labels/train")
+os.makedirs(f"{coco_dir}/labels/val")
+
+os.rename(f"{coco_dir}/coco/labels/train2017", f"{coco_dir}/labels/train")
+os.rename(f"{coco_dir}/coco/labels/val2017", f"{coco_dir}/labels/val")
 
 # Relabel with only buses left
 remap_labels(f"{coco_dir}/labels/train", {0: [5]})
@@ -64,7 +72,9 @@ coco_dataset = YOLODataset(coco_dir, ["bus"], ["train", "val"])
 coco_dataset.remove_classes_inplace([0])
 
 # Move images to backgrounds folder
-os.makedirs(stitch_backgrounds, exist_ok=True)
+os.makedirs(f"{stitch_backgrounds}/coco/train", exist_ok=True)
+os.makedirs(f"{stitch_backgrounds}/coco/val", exist_ok=True)
+
 os.rename(f"{coco_dir}/images/train", f"{stitch_backgrounds}/coco/train")
 os.rename(f"{coco_dir}/images/val", f"{stitch_backgrounds}/coco/val")
 
@@ -72,7 +82,7 @@ os.rename(f"{coco_dir}/images/val", f"{stitch_backgrounds}/coco/val")
 
 ROBOFLOW_PATHS_UNLABELED = [
     ["https://universe.roboflow.com/taku-3grva/bus-detextion", {0: [0, 1, 2, 3, 4]}, "train"],
-    ["https://universe.roboflow.com/bafo-ehbsl/bafo-xp3hy", {0: [0]}, "train"],
+    # ["https://universe.roboflow.com/bafo-ehbsl/bafo-xp3hy", {0: [0]}, "train"],
     ["https://universe.roboflow.com/ram-khlww/bus-emts1-chcch", {0: [11]}, "train"],
     ["https://universe.roboflow.com/test-project-csgdb/bus-route-number-testdataset", {0: [2]}, "val"],
 ]
@@ -82,8 +92,8 @@ output_paths_labeled = []
 for path, labels, split in ROBOFLOW_PATHS_UNLABELED:
     dataset_path = download_dataset(path)
     invert_yolo_data(dataset_path)
-    remap_labels(f"{dataset_path}/train/labels", labels)
-    remap_labels(f"{dataset_path}/valid/labels", labels)
+    remap_labels(f"{dataset_path}/labels/train", labels)
+    remap_labels(f"{dataset_path}/labels/valid", labels)
     output_paths_labeled.append(dataset_path)
 
     dataset = YOLODataset(dataset_path, ["bus"], ["train", "val"]) 
@@ -94,12 +104,8 @@ for path, labels, split in ROBOFLOW_PATHS_UNLABELED:
 ROBOFLOW_PATHS_UNLABELED = [
     ["https://universe.roboflow.com/fulgore/sbs-bus-numbers-uqimt-x9n31", "train"],
     ["https://universe.roboflow.com/nanyang-polytechnic-rskkz/nanyang-poly---block-502-bus-stops", "train"],
-    ["https://universe.roboflow.com/test-project-csgdb/bus-route-number-only-fyp", "val"],
     ["https://universe.roboflow.com/nanyang-polytechnic/sbs-bus-numbers-uqimt", "train"],
-    ["https://universe.roboflow.com/nanyang-polytechnic-rskkz/busdigits", "train"],
-    ["https://universe.roboflow.com/nyp/bus-number-dataset", "train"],
-    ["https://universe.roboflow.com/fyp-2zcsf/bus-detection-qzyuz", "train"],
-    ["https://universe.roboflow.com/school-yghmi/bus-detection-utpws", "train"],
+    ["https://universe.roboflow.com/nanyang-polytechnic-rskkz/busdigits", "train"]
 ]
 
 output_paths_no_labels = []
@@ -147,7 +153,7 @@ val_stitcher = Stitcher(generator, val_background, {
     "0": [bus_part_val, 0.1],
 }, parts_per_image=5)
 
-# Remove exisint data folder
+# # Remove exisint data folder
 shutil.move("data", "data_old")
 
 os.makedirs("data")
@@ -168,6 +174,15 @@ val_stitcher.execute(
     train_or_val=False,
     perimeter_end=(1280, 720)
 )
+
+
+# Add empty images too
+
+os.makedirs("data/images/train/backgrounds")
+os.makedirs("data/images/val/backgrounds")
+
+shutil.copytree(f"{stitch_backgrounds}/coco/train", "data/images/train/backgrounds")
+shutil.copytree(f"{stitch_backgrounds}/coco/val", "data/images/val/backgrounds")
 
 # Train the model
 

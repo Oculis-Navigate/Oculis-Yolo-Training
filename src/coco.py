@@ -19,7 +19,7 @@ def download_coco_dataset(dir: str):
     urls = [url + ("coco2017labels-segments.zip" if segments else "coco2017labels.zip")]  # labels
     
     logger.info("Downloading COCO labels...")
-    download(urls, dir=dir.parent)
+    download(urls, dir=dir)
 
     # Download data
     urls = [
