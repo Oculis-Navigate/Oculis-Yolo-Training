@@ -176,11 +176,6 @@ val_stitcher.execute(
 )
 
 
-# Add empty images too
-
-os.makedirs("data/images/train/backgrounds")
-os.makedirs("data/images/val/backgrounds")
-
 shutil.copytree(f"{stitch_backgrounds}/coco/train", "data/images/train/backgrounds")
 shutil.copytree(f"{stitch_backgrounds}/coco/val", "data/images/val/backgrounds")
 
