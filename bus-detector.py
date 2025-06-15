@@ -168,3 +168,11 @@ val_stitcher.execute(
     train_or_val=False,
     perimeter_end=(1280, 720)
 )
+
+# Train the model
+
+train_model(
+    "yolo11x.pt",
+    "default.yaml",
+    "data.yaml",
+)
