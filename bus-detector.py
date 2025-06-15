@@ -118,6 +118,17 @@ for path, split in ROBOFLOW_PATHS_UNLABELED:
     dataset.crop_using_model(pretrained_model, split, stitch_crops + "/" + path.split("/")[-1], "bus")
 
 
+## Print number of backgrounds and crops recursively
+
+def count_files(directory):
+    count = 0
+    for root, dirs, files in os.walk(directory):
+        count += len(files)
+    return count
+
+print(f"Number of backgrounds: {count_files(stitch_backgrounds)}")
+print(f"Number of crops: {count_files(stitch_crops)}")
+
 # Perform Stitching
 
 train_background = BackgroundLoader(f"{stitch_backgrounds}/coco/train", target_size=(1280, 720), max_cache_size=200, transform=background_transform)
@@ -130,21 +141,20 @@ generator = YOLOv8Generator(overlap_ratio=0.05)
 
 train_stitcher = Stitcher(generator, train_background, {
     "0": [bus_part_train, 0.1],
-}, parts_per_image=30)
+}, parts_per_image=5)
 
 val_stitcher = Stitcher(generator, val_background, {
     "0": [bus_part_val, 0.1],
-}, parts_per_image=100)
+}, parts_per_image=5)
 
 # Remove exisint data folder
-if os.path.exists("data"):
-    shutil.rmtree("data")
+shutil.move("data", "data_old")
 
 os.makedirs("data")
 
 # Generate datasets
 train_stitcher.execute(
-    7000, 
+    70000, 
     "data", 
     "train_1", 
     train_or_val=True,
@@ -152,7 +162,7 @@ train_stitcher.execute(
 )
 
 val_stitcher.execute(
-    3000, 
+    30000, 
     "data", 
     "val_1", 
     train_or_val=False,
