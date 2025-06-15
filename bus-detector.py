@@ -10,6 +10,7 @@ from src.data_wrangler import YOLODataset
 import albumentations as A
 from snapstitch import Stitcher, PartsLoader, BackgroundLoader, YOLOv8Generator
 from ultralytics import YOLO
+from src.utils import copy_random_half_files
 
 """
 
@@ -140,8 +141,8 @@ print(f"Number of crops: {count_files(stitch_crops)}")
 train_background = BackgroundLoader(f"{stitch_backgrounds}/coco/train", target_size=(1280, 720), max_cache_size=200, transform=background_transform)
 val_background = BackgroundLoader(f"{stitch_backgrounds}/coco/val", target_size=(1280, 720), max_cache_size=200, transform=background_transform)
 
-bus_part_train = PartsLoader(stitch_crops + "/train", scale=0.3, transform=transform, scaling_variation=0.7, max_cache_size=1000)
-bus_part_val = PartsLoader(stitch_crops + "/val", scale=0.3, transform=transform, scaling_variation=0.7, max_cache_size=1000)
+bus_part_train = PartsLoader(stitch_crops + "/train", scale=1.2, transform=transform, scaling_variation=0.7, max_cache_size=1000)
+bus_part_val = PartsLoader(stitch_crops + "/val", scale=1.2, transform=transform, scaling_variation=0.7, max_cache_size=1000)
 
 generator = YOLOv8Generator(overlap_ratio=0.05)
 
@@ -160,7 +161,7 @@ os.makedirs("data")
 
 # Generate datasets
 train_stitcher.execute(
-    70000, 
+    15000, 
     "data", 
     "train_1", 
     train_or_val=True,
@@ -168,16 +169,16 @@ train_stitcher.execute(
 )
 
 val_stitcher.execute(
-    30000, 
+    5000, 
     "data", 
     "val_1", 
     train_or_val=False,
     perimeter_end=(1280, 720)
 )
 
-
-shutil.copytree(f"{stitch_backgrounds}/coco/train", "data/images/train/backgrounds")
-shutil.copytree(f"{stitch_backgrounds}/coco/val", "data/images/val/backgrounds")
+# Copy half of the backgrounds
+copy_random_half_files(f"{stitch_backgrounds}/coco/train", "data/images/train/backgrounds", ratio=0.3)
+copy_random_half_files(f"{stitch_backgrounds}/coco/val", "data/images/val/backgrounds", ratio=0.5)
 
 # Train the model
 
