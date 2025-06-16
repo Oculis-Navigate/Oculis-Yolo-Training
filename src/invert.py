@@ -58,6 +58,9 @@ def invert_yolo_data(data_path: str):
             os.rename(old_labels, new_labels)
             logger.info(f"Moved {old_labels} -> {new_labels}")
     
+    # remove old train,test,val folders
+    for folder in required_folders:
+        os.rmdir(os.path.join(data_path, folder))
     logger.info("Data inversion completed successfully")
 
 def invert_yolo_data_from_roboflow(input_filepath: str):
@@ -97,7 +100,7 @@ def invert_yolo_data_from_roboflow(input_filepath: str):
         
         # Rename to data.yaml to dataset.yaml
         input_filepath = Path(input_filepath)
-        output_filepath = input_filepath.parent / "dataset.yaml"
+        output_filepath = input_filepath.parent / "data.yaml"
 
         with open(output_filepath, 'w') as file:
             yaml.dump(data, file, default_flow_style=False, sort_keys=False)

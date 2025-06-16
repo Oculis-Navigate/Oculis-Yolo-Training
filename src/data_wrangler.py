@@ -236,7 +236,7 @@ class YOLODataset:
         # os.makedirs(output_path, exist_ok=True)
 
         # Call the model.predict method
-        results = model.predict(self.path + "/images/" + split, save=True, save_crop=True) 
+        results = model.predict(self.path + "/images/**/*.*", save=True, save_crop=True) 
 
         saved_dir = results[0].save_dir + "/crops/" + class_name
 

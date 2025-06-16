@@ -76,9 +76,9 @@ Notes:
 
 src_dir = 'data/taku-3grva_bus-detextion_dataset'  # Replace with the path to your source directory
 classes = ["bus", "bus 151", "bus 154", "bus 184", "bus 74"]  # Replace with your class names
-subset = 'Train'  # Choose between 'Train' or 'Validation'
 
-def move_and_rename_files(src_dir, dest_dir, classes, subset):
+def move_and_rename_files(src_dir, dest_dir, classes):
+    subset = 'train'
     images_subfolder = os.path.join(src_dir, 'images')
     labels_subfolder = os.path.join(src_dir, 'labels')
 
@@ -97,6 +97,8 @@ def move_and_rename_files(src_dir, dest_dir, classes, subset):
     # Check if there are subfolders in the images_subfolder
     subfolders = [f for f in os.listdir(images_subfolder) if os.path.isdir(os.path.join(images_subfolder, f))]
 
+    counter = 1
+
     if subfolders:
         for folder_name in subfolders:
             src_images_folder = os.path.join(images_subfolder, folder_name)
@@ -109,15 +111,16 @@ def move_and_rename_files(src_dir, dest_dir, classes, subset):
                 src_image = os.path.join(src_images_folder, image)
                 src_label = os.path.join(src_labels_folder, label)
 
-                dest_image = os.path.join(dest_subfolder, f"{os.path.basename(folder_name)}_frame{i}.jpg")
-                dest_label = os.path.join(dest_subfolder, f"{os.path.basename(folder_name)}_frame{i}.txt")
+                dest_image = os.path.join(dest_subfolder, f"{counter}.jpg")
+                dest_label = os.path.join(dest_subfolder, f"{counter}.txt")
 
                 # Copy and rename the image and label files
                 shutil.copy2(src_image, dest_image)
                 shutil.copy2(src_label, dest_label)
 
                 # Write the path of the image to Train.txt or Validation.txt
-                txt_file.write(f"data/obj_{subset}_data/{os.path.basename(folder_name)}_frame{i}.jpg\n")
+                txt_file.write(f"data/obj_{subset}_data/{counter}.jpg\n")
+                counter += 1
     else:
         images = sorted(os.listdir(images_subfolder))
         labels = sorted(os.listdir(labels_subfolder))
@@ -134,7 +137,8 @@ def move_and_rename_files(src_dir, dest_dir, classes, subset):
             shutil.copy2(src_label, dest_label)
 
             # Write the path of the image to Train.txt or Validation.txt
-            txt_file.write(f"data/obj_{subset}_data/{image}\n")
+            txt_file.write(f"data/obj_{subset}_data/{counter}.jpg\n")
+            counter += 1
 
     # Close Train.txt or Validation.txt file
     txt_file.close()
@@ -152,6 +156,4 @@ def move_and_rename_files(src_dir, dest_dir, classes, subset):
         f.write(f"backup = backup/\n")
 
     # Create a zip archive of the final product
-    shutil.make_archive(dest_dir, 'zip', dest_dir)
-
-move_and_rename_files(src_dir, None, classes, subset)
+    # shutil.make_archive(dest_dir, 'zip', dest_dir)

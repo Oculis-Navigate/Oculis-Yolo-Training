@@ -7,9 +7,9 @@ mode: train  # (str) YOLO mode, i.e. train, val, predict, export, track, benchma
 # Train settings -------------------------------------------------------------------------------------------------------
 model:  # (str, optional) path to model file, i.e. yolov8n.pt, yolov8n.yaml
 data:  # (str, optional) path to data file, i.e. coco128.yaml
-epochs: 300  # (int) number of epochs to train for
+epochs: 100  # (int) number of epochs to train for
 patience: 40  # (int) epochs to wait for no observable improvement for early stopping of training
-batch: 64  # (int) number of images per batch (-1 for AutoBatch)
+batch: 16  # (int) number of images per batch (-1 for AutoBatch)
 imgsz: 640  # (int | list) input images size as int for train and val modes, or list[w,h] for predict and export modes
 save: True  # (bool) save train checkpoints and predict results
 save_period: -1 # (int) Save checkpoint every x epochs (disabled if < 1)
@@ -32,7 +32,7 @@ resume: False  # (bool) resume training from last checkpoint
 amp: True  # (bool) Automatic Mixed Precision (AMP) training, choices=[True, False], True runs AMP check
 fraction: 1.0  # (float) dataset fraction to train on (default is 1.0, all images in train set)
 profile: False  # (bool) profile ONNX and TensorRT speeds during training for loggers
-freeze: 20  # (int | list, optional) freeze first n layers, or freeze list of layer indices during training
+freeze: 10  # (int | list, optional) freeze first n layers, or freeze list of layer indices during training
 # Segmentation
 overlap_mask: True  # (bool) masks should overlap during training (segment train only)
 mask_ratio: 4  # (int) mask downsample ratio (segment train only)
@@ -105,12 +105,12 @@ degrees: 20.0  # (float) image rotation (+/- deg)
 translate: 0.2  # (float) image translation (+/- fraction)
 scale: 0.2  # (float) image scale (+/- gain)
 shear: 0.1  # (float) image shear (+/- deg)
-perspective: 0.00005  # (float) image perspective (+/- fraction), range 0-0.001
+perspective: 0.00000  # (float) image perspective (+/- fraction), range 0-0.001
 flipud: 0.3  # (float) image flip up-down (probability)
 fliplr: 0.9  # (float) image flip left-right (probability)
-mosaic: 0.3  # (float) image mosaic (probability)
-mixup: 0.3 # (float) image mixup (probability)
-copy_paste: 0.3  # (float) segment copy-paste (probability)
+mosaic: 0.0  # (float) image mosaic (probability)
+mixup: 0.0 # (float) image mixup (probability)
+copy_paste: 0.0  # (float) segment copy-paste (probability)
 
 # Custom config.yaml ---------------------------------------------------------------------------------------------------
 cfg:  # (str, optional) for overriding defaults.yaml
