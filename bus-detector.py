@@ -67,6 +67,8 @@ os.rename(f"{coco_dir}/coco/labels/val2017", f"{coco_dir}/labels/val")
 remap_labels(f"{coco_dir}/labels/train", {0: [5]})
 remap_labels(f"{coco_dir}/labels/val", {0: [5]})
 
+# Backup coco dataset before changes
+shutil.copytree(coco_dir, f"{coco_dir}_backup") 
 
 coco_dataset = YOLODataset(coco_dir, ["bus"], ["train", "val"])
 coco_dataset.remove_classes_inplace([0])
@@ -98,7 +100,6 @@ for path, labels, split in ROBOFLOW_PATHS_UNLABELED:
     dataset = YOLODataset(dataset_path, ["bus"], ["train", "val"]) 
     dataset.crop_images(stitch_crops + "/" + split + "/" + path.split("/")[-1], [0])
 
-# Collect datasets without labels
 
 ROBOFLOW_PATHS_UNLABELED = [
     ["https://universe.roboflow.com/nanyang-polytechnic-rskkz/nanyang-poly---block-502-bus-stops", "val"],
@@ -152,14 +153,13 @@ val_stitcher = Stitcher(generator, val_background, {
 }, parts_per_image=3)
 
 # # Remove exisint data folder
-shutil.move("data", "data_old")
 
-os.makedirs("data")
+os.makedirs("data_train")
 
 # Generate datasets
 train_stitcher.execute(
-    15000, 
-    "data", 
+    5000, 
+    "data_train", 
     "train_1", 
     train_or_val=True,
     perimeter_end=(1280, 720)
@@ -167,20 +167,23 @@ train_stitcher.execute(
 
 val_stitcher.execute(
     5000, 
-    "data", 
+    "data_train", 
     "val_1", 
     train_or_val=False,
     perimeter_end=(1280, 720)
 )
 
-# Copy half of the backgrounds
-copy_random_half_files(f"{stitch_backgrounds}/coco/train", "data/images/train/backgrounds", ratio=0.3)
-copy_random_half_files(f"{stitch_backgrounds}/coco/val", "data/images/val/backgrounds", ratio=0.5)
+# Merge backup coco dataset into data folder
+
+merge_yolo_datasets(
+    [f"{coco_dir}_backup", *output_paths_labeled, *output_paths_labeled, *output_paths_labeled],
+    "data_train",
+)
 
 # Train the model
 
 train_model(
-    "yolo11l.pt",
+    "yolo11m.pt",
     "default.yaml",
     "data.yaml",
 )
