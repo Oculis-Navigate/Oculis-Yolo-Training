@@ -335,3 +335,78 @@ class YOLODataset:
                         f.write(f"{number_label['obj_class']} {number_label['x_center']} {number_label['y_center']} {number_label['width']} {number_label['height']}\n")
 
         return output_path
+
+    def crop_bus_with_number_using_model(self, output_path: str, model: YOLO, number_indices: list[int]):
+        # Init dataset at output path
+        os.makedirs(output_path, exist_ok=True)
+        os.makedirs(os.path.join(output_path, "images"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "labels"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "images", "train"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "images", "val"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "labels", "train"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "labels", "val"), exist_ok=True)
+
+        # Loop thru labels
+        for label in tqdm(self.labels, desc="Cropping bus with number using model"):
+            split = label["split"]
+
+            # Find the bus using the model
+            image = cv2.imread(label["image_path"])
+            bus_image_height, bus_image_width = image.shape[:2]
+            results = model.predict(image, save=True, save_crop=True)
+            
+
+            # Get the bus crop
+            bus_coords = results[0].boxes.xyxy 
+            for index, coord in enumerate(bus_coords):
+                x1 = int(coord[0])
+                y1 = int(coord[1])
+                x2 = int(coord[2])
+                y2 = int(coord[3])
+
+                bus_crop_output_path = os.path.join(output_path, "images", split, f"{os.path.basename(label['image_path'])}_{index}.jpg")
+                bus_crop_output_label_path = os.path.join(output_path, "labels", split, f"{os.path.basename(label['image_path'])}_{index}.txt")
+
+                # Crop the bus
+                bus_crop = image[y1:y2, x1:x2]
+
+                bus_crop_height, bus_crop_width = bus_crop.shape[:2]
+
+                # Get the number labels
+                number_labels = [obj for obj in label["labels"] if obj["obj_class"] in number_indices]
+
+                # Loop thru number labels
+                matching_number_labels = []
+                for number_label in number_labels:
+                    # Get the number label
+                    number_x_center = number_label["x_center"] * bus_image_width
+                    number_y_center = number_label["y_center"] * bus_image_height
+                    number_width = number_label["width"] * bus_image_width
+                    number_height = number_label["height"] * bus_image_height
+
+                    number_x1 = number_x_center - number_width / 2
+                    number_x2 = number_x_center + number_width / 2
+                    number_y1 = number_y_center - number_height / 2
+                    number_y2 = number_y_center + number_height / 2
+
+                    # Check if number label is within bus bounding box  
+                    if number_x1 > x1 and number_x2 < x2 and number_y1 > y1 and number_y2 < y2:
+                        # Normalise the label to the bus crop
+                        number_label["x_center"] = (number_x_center - x1) / bus_crop_width
+                        number_label["y_center"] = (number_y_center - y1) / bus_crop_height
+                        number_label["width"] = number_width / bus_crop_width
+                        number_label["height"] = number_height / bus_crop_height
+                        
+                        # Save the label
+                        matching_number_labels.append(number_label)
+
+                # Save the bus crop
+                cv2.imwrite(bus_crop_output_path, bus_crop)
+
+                # Save the labels
+                with open(bus_crop_output_label_path, "w") as f:
+                    for number_label in matching_number_labels:
+                        f.write(f"{number_label['obj_class']} {number_label['x_center']} {number_label['y_center']} {number_label['width']} {number_label['height']}\n")
+                
+                
+            
