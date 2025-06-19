@@ -244,3 +244,94 @@ class YOLODataset:
         shutil.copytree(saved_dir, output_path)
 
         logger.info(f"Image cropping completed. Total crops saved: {len(os.listdir(output_path))}")
+
+    def crop_bus_with_number(self, output_path: str, bus_index: int, number_indices: list[int]):
+        # Init dataset at output path
+        os.makedirs(output_path, exist_ok=True)
+        os.makedirs(os.path.join(output_path, "images"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "labels"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "images", "train"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "images", "val"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "labels", "train"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "labels", "val"), exist_ok=True)
+
+        # Loop thru labels
+        for label in tqdm(self.labels, desc="Cropping bus with number"):
+            split = label["split"] 
+
+            if not bus_index in label["available_classes"]:
+                continue
+
+            image_labels = label["labels"] 
+
+            # Get labels with bus index
+            bus_labels = [obj for obj in image_labels if obj["obj_class"] == bus_index]
+
+            # Get labels with number indices
+            number_labels = [obj for obj in image_labels if obj["obj_class"] in number_indices]
+            
+            # Loop thru bus labels
+            for index, bus_label in enumerate(bus_labels):
+
+                bus_crop_output_path = os.path.join(output_path, "images", split, f"{os.path.basename(label['image_path'])}_{index}.jpg")
+                bus_crop_output_label_path = os.path.join(output_path, "labels", split, f"{os.path.basename(label['image_path'])}_{index}.txt")
+
+                # Get bus image
+                bus_image = cv2.imread(label["image_path"])
+                bus_image_height, bus_image_width = bus_image.shape[:2]
+
+                # Get bus bounding box
+                x_center = bus_label["x_center"] * bus_image_width
+                y_center = bus_label["y_center"] * bus_image_height
+                width = bus_label["width"] * bus_image_width
+                height = bus_label["height"] * bus_image_height
+
+                bus_x1 = int(x_center - width / 2)
+                bus_x2 = int(x_center + width / 2)
+                bus_y1 = int(y_center - height / 2)
+                bus_y2 = int(y_center + height / 2)
+
+                # Crop bus image
+                bus_crop = bus_image[bus_y1:bus_y2, bus_x1:bus_x2]
+
+                bus_width = bus_x2 - bus_x1
+                bus_height = bus_y2 - bus_y1
+
+                # Loop thru number labels and get labels within the bus bounding box
+                matching_number_labels = []
+                for number_label in number_labels:
+                    number_x_center = number_label["x_center"] * bus_image_width
+                    number_y_center = number_label["y_center"] * bus_image_height
+                    number_width = number_label["width"] * bus_image_width
+                    number_height = number_label["height"] * bus_image_height 
+
+                    number_x1 = number_x_center - number_width / 2
+                    number_x2 = number_x_center + number_width / 2
+                    number_y1 = number_y_center - number_height / 2
+                    number_y2 = number_y_center + number_height / 2
+
+                    # Check if number label is within bus bounding box
+                    # If it is, normalise the label to the bus crop
+                    if number_x1 > bus_x1 and number_x2 < bus_x2 and number_y1 > bus_y1 and number_y2 < bus_y2:
+                        # Normalise the label to the bus crop
+                        number_label["x_center"] = (number_x_center - bus_x1) / bus_width
+                        number_label["y_center"] = (number_y_center - bus_y1) / bus_height
+                        number_label["width"] = number_width / bus_width
+                        number_label["height"] = number_height / bus_height
+                        
+                        # Save the label
+                        matching_number_labels.append(number_label) 
+
+                # Save the bus crop
+                try:
+                    cv2.imwrite(bus_crop_output_path, bus_crop)
+                except:
+                    print("Error saving bus crop")
+                    continue
+
+                # Save the labels
+                with open(bus_crop_output_label_path, "w") as f:
+                    for number_label in matching_number_labels:
+                        f.write(f"{number_label['obj_class']} {number_label['x_center']} {number_label['y_center']} {number_label['width']} {number_label['height']}\n")
+
+        return output_path
