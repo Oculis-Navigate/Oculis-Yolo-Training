@@ -14,7 +14,7 @@ Merge X yolo datasets into one
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def merge_yolo_datasets(datasets: List[str], output_path: str):
+def merge_yolo_datasets(datasets: List[str], output_path: str, splits = ["train", "valid", "test"]):
     """
     Merge X yolo datasets into one
     """
@@ -27,7 +27,7 @@ def merge_yolo_datasets(datasets: List[str], output_path: str):
     os.makedirs(os.path.join(output_path, "images"), exist_ok=True)
     os.makedirs(os.path.join(output_path, "labels"), exist_ok=True)
 
-    splits = ["train", "valid", "test"]
+    
     for split in splits:
         os.makedirs(os.path.join(output_path, "images", split), exist_ok=True)
         os.makedirs(os.path.join(output_path, "labels", split), exist_ok=True)

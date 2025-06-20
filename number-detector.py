@@ -43,7 +43,7 @@ for path, labels, split in ROBOFLOW_PATHS_UNLABELED:
     remap_labels(f"{dataset_path}/labels/train", labels)
     remap_labels(f"{dataset_path}/labels/valid", labels)
 
-    dataset = YOLODataset(dataset_path, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "E", "e", "G", "M", "W"], ["train", "val"]) 
+    dataset = YOLODataset(dataset_path, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "E", "e", "G", "M", "W"], ["train", "valid"]) 
     crop_output = dataset.crop_bus_with_number(f"./bus_crops", 16, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
 
 
@@ -62,13 +62,13 @@ for path, labels, split in ROBOFLOW_PATHS_UNLABELED:
     remap_labels(f"{dataset_path}/labels/train", labels)
     remap_labels(f"{dataset_path}/labels/valid", labels)
 
-    dataset = YOLODataset(dataset_path, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], ["train", "val"]) 
-    crop_output = dataset.crop_bus_with_number_using_model(f"./bus_crops_model", model, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    dataset = YOLODataset(dataset_path, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], ["train", "valid"]) 
+    crop_output = dataset.crop_bus_with_number_using_model(f"./bus_crops", model, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     output_paths_unlabeled.append(crop_output)
 
 
-# Merge datasets
-merge_yolo_datasets(output_paths_labeled + output_paths_unlabeled, "data/")
+# # Merge datasets
+# merge_yolo_datasets(["./bus_crops_model", "./bus_crops"], "data/", splits=["train","val"])
 
 # Train model 
-train_model("data/", "number_default.yaml", "number_data.yaml")    
+train_model("yolo11n.pt", "number_default.yaml", "number_data.yaml")    

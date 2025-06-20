@@ -42,6 +42,24 @@ class YOLODataset:
         # No need load images
         self.labels = []
 
+        # label data structure is 
+        # {
+        #     "image_path": str,
+        #     "label_path": str,
+        #     "labels": list[dict],
+        #     "split": str,
+        #     "available_classes": set[int]
+        # }
+
+        # label dict is 
+        # {
+        #     "obj_class": int,
+        #     "x_center": float,
+        #     "y_center": float,
+        #     "width": float,
+        #     "height": float
+        # }
+
         logger.info(f"Initializing YOLO dataset from: {path}")
         logger.info(f"Classes: {classes}")
         logger.info(f"Splits: {splits_use}")
@@ -124,9 +142,9 @@ class YOLODataset:
                         overall_dict["available_classes"] = available_classes
                         self.labels.append(overall_dict)
                         total_files += 1
-        
+            logger.info(f"Loaded {len(label_files)} files with {split} valid samples")
         logger.info(f"Loaded {total_files} files with {len(self.labels)} valid samples")
-                        
+
     def crop_images(self, output_path: str, crop_filter: list[int]): 
         logger.info(f"Starting image cropping. Output: {output_path}")
         logger.info(f"Crop filter classes: {crop_filter}")
@@ -251,13 +269,14 @@ class YOLODataset:
         os.makedirs(os.path.join(output_path, "images"), exist_ok=True)
         os.makedirs(os.path.join(output_path, "labels"), exist_ok=True)
         os.makedirs(os.path.join(output_path, "images", "train"), exist_ok=True)
-        os.makedirs(os.path.join(output_path, "images", "val"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "images", "valid"), exist_ok=True)
         os.makedirs(os.path.join(output_path, "labels", "train"), exist_ok=True)
-        os.makedirs(os.path.join(output_path, "labels", "val"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "labels", "valid"), exist_ok=True)
 
         # Loop thru labels
         for label in tqdm(self.labels, desc="Cropping bus with number"):
             split = label["split"] 
+            print(split)
 
             if not bus_index in label["available_classes"]:
                 continue
@@ -342,9 +361,9 @@ class YOLODataset:
         os.makedirs(os.path.join(output_path, "images"), exist_ok=True)
         os.makedirs(os.path.join(output_path, "labels"), exist_ok=True)
         os.makedirs(os.path.join(output_path, "images", "train"), exist_ok=True)
-        os.makedirs(os.path.join(output_path, "images", "val"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "images", "valid"), exist_ok=True)
         os.makedirs(os.path.join(output_path, "labels", "train"), exist_ok=True)
-        os.makedirs(os.path.join(output_path, "labels", "val"), exist_ok=True)
+        os.makedirs(os.path.join(output_path, "labels", "valid"), exist_ok=True)
 
         # Loop thru labels
         for label in tqdm(self.labels, desc="Cropping bus with number using model"):

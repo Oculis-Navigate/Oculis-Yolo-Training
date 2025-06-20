@@ -1,6 +1,6 @@
-path: ./
+path: ./bus_crops
 train: images/train
-val: images/val
+val: images/valid
 nc: 17
 names:
   0: '0'

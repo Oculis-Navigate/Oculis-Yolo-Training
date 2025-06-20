@@ -54,7 +54,11 @@ cover/
 # Translations
 *.mo
 *.pot
-
+best-number-19jun.zip
+bus_crops_model/
+runs/
+runs 2/
+bus_crops/
 # Django stuff:
 *.log
 local_settings.py
