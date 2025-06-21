@@ -42,10 +42,11 @@ class StitchingCrops:
             logger.warning(f"Could not load image: {chosen_crop}")
             return self.get_random_crop()
 
-        # Randomly choose augmentations
-        augmentations = [self.partial_block_out, self.blur, self.saturation, self.brightness, self.contrast]
-        chosen_augmentation = random.choice(augmentations)
-        image = chosen_augmentation(image)
+        # Randomly choose 2 augmentations
+        augmentations = [self.partial_block_out, self.blur, self.saturation, self.brightness, self.contrast, self.random_erase_top_or_bottom, self.random_erase_left_or_right, self.random_erase_middle]
+        chosen_augmentations = random.sample(augmentations, 2)
+        for augmentation in chosen_augmentations:
+            image = augmentation(image)
         
         # Return crop
         return image, chosen_class
@@ -79,6 +80,27 @@ class StitchingCrops:
     def contrast(self, image):
         # Contrast the image
         image = cv2.convertScaleAbs(image, alpha=1.5, beta=0)
+        return image
+    
+    def random_erase_top_or_bottom(self, image):
+        # Randomly erase the top or bottom of the image
+        if random.random() < 0.5:
+            image[:image.shape[0]//5, :] = 0
+        else:
+            image[image.shape[0]//5:, :] = 0
+        return image
+    
+    def random_erase_left_or_right(self, image):
+        # Randomly erase the left or right of the image
+        if random.random() < 0.5:
+            image[:, :image.shape[1]//5] = 0
+        else:
+            image[:, image.shape[1]//5:] = 0
+        return image
+    
+    def random_erase_middle(self, image):
+        # Randomly erase the middle of the image
+        image[image.shape[0]//5*2:image.shape[0]//5*3, :] = 0
         return image
     
     def get_crops(self):

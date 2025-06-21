@@ -104,6 +104,8 @@ class BusNumberStitcher:
 
                         bus_crop[new_number_y1:new_number_y2, new_number_x1:new_number_x2] = 0 
 
+                        
+
                         crop_width = new_number_x2 - new_number_x1
                         crop_height = new_number_y2 - new_number_y1
 
@@ -155,6 +157,20 @@ class BusNumberStitcher:
                     for label in new_labels:
                         f.write(f"{label['class']} {label['x_center']} {label['y_center']} {label['width']} {label['height']}\n")
                 
+                # Save a copy of bus crop for label-less background
+                # Loop thru labels and de-normalise to bus crop
+                # Black out the labels
+                temp_bus_crop = bus_crop.copy()
+                for label in new_labels:
+                    label["x_center"] = label["x_center"] * bus_crop.shape[1]
+                    label["y_center"] = label["y_center"] * bus_crop.shape[0]
+                    label["width"] = label["width"] * bus_crop.shape[1]
+                    label["height"] = label["height"] * bus_crop.shape[0]
+
+                    temp_bus_crop[int(label["y_center"] - label["height"] / 2):int(label["y_center"] + label["height"] / 2), int(label["x_center"] - label["width"] / 2):int(label["x_center"] + label["width"] / 2)] = 0
+
+                bus_crop_output_path_no_labels = os.path.join(output_path, "images", split, f"{os.path.basename(background['image_path'])}_{index}_no_labels.jpg")
+                cv2.imwrite(bus_crop_output_path_no_labels, temp_bus_crop)
                 logger.debug(f"Saved bus crop: {bus_crop_output_path}")
         
         logger.info("Stitching process completed successfully")

@@ -353,6 +353,20 @@ class YOLODataset:
                     for number_label in matching_number_labels:
                         f.write(f"{number_label['obj_class']} {number_label['x_center']} {number_label['y_center']} {number_label['width']} {number_label['height']}\n")
 
+                # save a copy of bus crop for label-less background
+                bus_crop_no_labels = bus_crop.copy()
+                # loop thru each label and set area to black
+                for number_label in matching_number_labels:
+                    # de-normalise the label to the bus crop
+                    number_x_center = number_label["x_center"] * bus_width
+                    number_y_center = number_label["y_center"] * bus_height
+                    number_width = number_label["width"] * bus_width
+                    number_height = number_label["height"] * bus_height
+
+                    bus_crop_no_labels[int(number_y_center - number_height / 2):int(number_y_center + number_height / 2), int(number_x_center - number_width / 2):int(number_x_center + number_width / 2)] = 0
+                bus_crop_output_path_no_labels = os.path.join(output_path, "images", split, f"{os.path.basename(label['image_path'])}_{index}_no_labels.jpg")
+                cv2.imwrite(bus_crop_output_path_no_labels, bus_crop_no_labels)
+
         return output_path
 
     def crop_bus_with_number_using_model(self, output_path: str, model: YOLO, number_indices: list[int]):
