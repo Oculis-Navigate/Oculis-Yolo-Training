@@ -48,3 +48,9 @@ Background
 - [Nanyang Poly & Block 502 Bus Stops Object Detection Dataset and Pre-Trained Model by nanyang polytechnic](https://universe.roboflow.com/nanyang-polytechnic-rskkz/nanyang-poly---block-502-bus-stops)
 - [crushedmonster/Detection_of_Bus_Number_in_Bus_Panel: Capstone Project for General Assembly Data Science Immersive Flex Course](https://github.com/crushedmonster/Detection_of_Bus_Number_in_Bus_Panel/tree/master)
 
+
+
+# Pure Numbers
+
+https://universe.roboflow.com/blank-lgcth/led-display-board-detection
+Can go crazy with numbers to get stitching output
