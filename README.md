@@ -1,1 +1,1 @@
-# SCVU-Training
+This repository contains the training scripts and helper functions used to train the bus and bus service number detection YOLO models for Oculis. Though undocumented (and *a little* messy) we plan on updating this sometime in the future
